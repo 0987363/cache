@@ -150,6 +150,9 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 			c.Writer.WriteHeader(cache.status)
 			for k, vals := range cache.header {
 				for _, v := range vals {
+					if (k == "Content-Encoding" && v == "gzip") {
+						continue
+					}
 					c.Writer.Header().Add(k, v)
 				}
 			}
