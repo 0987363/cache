@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
+var (
 	CACHE_MIDDLEWARE_KEY = "gincontrib.cache"
 )
 
@@ -37,6 +37,14 @@ type cachedWriter struct {
 }
 
 var _ gin.ResponseWriter = &cachedWriter{}
+
+func SetKey(key string) {
+	CACHE_MIDDLEWARE_KEY = key
+}
+
+func SetPageKey(key string) {
+	PageCachePrefix = key
+}
 
 func urlEscape(prefix string, u string) string {
 	key := url.QueryEscape(u)
