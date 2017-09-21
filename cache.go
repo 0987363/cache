@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"fmt"
 
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
@@ -51,7 +52,7 @@ func urlEscape(prefix string, u string) string {
 	if len(key) > 200 {
 		h := sha1.New()
 		io.WriteString(h, u)
-		key = string(h.Sum(nil))
+		key = fmt.Sprintf("%x", h.Sum(nil))
 	}
 	var buffer bytes.Buffer
 	buffer.WriteString(prefix)
