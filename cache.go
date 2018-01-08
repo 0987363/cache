@@ -267,12 +267,3 @@ func getKey(c *gin.Context) (string, error) {
 	return key, nil
 }
 
-func getUri(us string) (string, error) {
-	q, err := url.Parse(us)
-	if err != nil {
-		return "", err
-	}
-
-	return q.RawQuery(), nil
-}
-
