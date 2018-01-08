@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"time"
 	"fmt"
+	"errors"
+	"io/ioutil"
 
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
@@ -20,6 +22,35 @@ var (
 
 var (
 	PageCachePrefix = "gincontrib.page.cache"
+)
+
+const (
+    // ResultLimitHeader is request result limit
+    ResultLimitHeader = "X-Result-Limit"
+
+    // ResultOffsetHeader is request result offset
+    ResultOffsetHeader = "X-Result-Offset"
+
+    // ResultSortHeader is request result sort
+    ResultSortHeader = "X-Result-Sort"
+
+    // ResultCountHeader is request result count
+    ResultCountHeader = "X-Result-Count"
+
+	AuthenticationHeader = "X-Druid-Authentication"
+	AuthenticationParam = "authentication"
+
+    // ResultLimitParam url limit
+    ResultLimitParam = "limit"
+
+    // ResultOffsetParam url offset
+    ResultOffsetParam = "offset"
+
+    // ResultSortParam url sort
+    ResultSortParam = "sort"
+
+    // ResultLastParam url sort
+    ResultLastParam = "last"
 )
 
 type responseCache struct {
@@ -153,9 +184,14 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 
 	return func(c *gin.Context) {
 		var cache responseCache
-		url := c.Request.URL
-		key := urlEscape(PageCachePrefix, url.RequestURI())
-		log.Println(key)
+
+		key, err := getKey(c)
+		if err != nil {
+			log.Println("get key failed:", err)
+			return
+		}
+		log.Println("Key is:", key)
+
 		if err := store.Get(key, &cache); err != nil {
 			log.Println(err.Error())
 			// replace writer
@@ -181,3 +217,62 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 		}
 	}
 }
+
+func getKey(c *gin.Context) (string, error) {
+	key := c.Request.Method
+
+    token := c.Query(AuthenticationParam)
+    if token == "" {
+        token = c.Request.Header.Get(AuthenticationHeader)
+        if token == "" {
+            return "", errors.New("Token is invalid.")
+        }
+    }
+	key = key + "\t" + token
+
+	offset := c.Query(ResultOffsetParam)
+	if offset == "" {
+		offset = c.Request.Header.Get(ResultOffsetHeader)
+		if offset == "" {
+			offset = "0"
+		}
+	}
+	key = key + "\t" + offset
+
+	limit := c.Query(ResultLimitParam)
+    if limit == "" {
+        limit = c.Request.Header.Get(ResultLimitHeader)
+        if limit == "" {
+			limit = "0"
+        }
+    }
+	key = key + "\t" + limit
+
+	sorts := c.Query(ResultSortParam)
+    if sorts == "" {
+        sorts = c.Request.Header.Get(ResultSortHeader)
+        if sorts == "" {
+			sorts = ""
+        }
+    }
+	key = key + "\t" + sorts
+
+	if c.Request.Method == http.MethodPost {
+		b, _ := ioutil.ReadAll(c.Request.Body)
+		c.Request.Body.Close()  //  must close
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+		key = key + "\t" + string(b)
+	}
+
+	return key, nil
+}
+
+func getUri(us string) (string, error) {
+	q, err := url.Parse(us)
+	if err != nil {
+		return "", err
+	}
+
+	return q.RawQuery(), nil
+}
+
