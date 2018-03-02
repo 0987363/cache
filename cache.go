@@ -246,6 +246,6 @@ func getKey(c *gin.Context) (string, error) {
 		key = key + "\t" + string(b)
 	}
 
-	return key, nil
+	return urlEscape(PageCachePrefix, c.Request.URL.RequestURI() + key), nil
 }
 
