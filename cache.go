@@ -25,32 +25,22 @@ var (
 )
 
 const (
-    // ResultLimitHeader is request result limit
+    // ResultLimitHeader is request limit
     ResultLimitHeader = "X-Result-Limit"
 
-    // ResultOffsetHeader is request result offset
+    // ResultOffsetHeader is request offset
     ResultOffsetHeader = "X-Result-Offset"
 
-    // ResultSortHeader is request result sort
+    // ResultSortHeader is request sort
     ResultSortHeader = "X-Result-Sort"
 
     // ResultCountHeader is request result count
     ResultCountHeader = "X-Result-Count"
 
 	AuthenticationHeader = "X-Druid-Authentication"
-	AuthenticationParam = "authentication"
 
-    // ResultLimitParam url limit
-    ResultLimitParam = "limit"
-
-    // ResultOffsetParam url offset
-    ResultOffsetParam = "offset"
-
-    // ResultSortParam url sort
-    ResultSortParam = "sort"
-
-    // ResultLastParam url sort
-    ResultLastParam = "last"
+    // ResultLastParam url last
+    ResultLastHeader = "X-Result-Last"
 )
 
 type responseCache struct {
@@ -221,40 +211,32 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 func getKey(c *gin.Context) (string, error) {
 	key := c.Request.Method
 
-    token := c.Query(AuthenticationParam)
-    if token == "" {
-        token = c.Request.Header.Get(AuthenticationHeader)
-        if token == "" {
-            return "", errors.New("Token is invalid.")
-        }
-    }
+
+	token := c.Request.Header.Get(AuthenticationHeader)
+	if token == "" {
+		token = c.Query(AuthenticationHeader)
+		if token == "" {
+			return "", errors.New("Token is invalid.")
+		}
+	}
 	key = key + "\t" + token
 
-	offset := c.Query(ResultOffsetParam)
+	offset := c.Request.Header.Get(ResultOffsetHeader)
 	if offset == "" {
-		offset = c.Request.Header.Get(ResultOffsetHeader)
-		if offset == "" {
-			offset = "0"
-		}
+		offset = "0"
 	}
 	key = key + "\t" + offset
 
-	limit := c.Query(ResultLimitParam)
-    if limit == "" {
-        limit = c.Request.Header.Get(ResultLimitHeader)
-        if limit == "" {
-			limit = "0"
-        }
-    }
+	limit := c.Request.Header.Get(ResultLimitHeader)
+	if limit == "" {
+		limit = "0"
+	}
 	key = key + "\t" + limit
 
-	sorts := c.Query(ResultSortParam)
-    if sorts == "" {
-        sorts = c.Request.Header.Get(ResultSortHeader)
-        if sorts == "" {
-			sorts = ""
-        }
-    }
+	sorts := c.Request.Header.Get(ResultSortHeader)
+	if sorts == "" {
+		sorts = ""
+	}
 	key = key + "\t" + sorts
 
 	if c.Request.Method == http.MethodPost {
