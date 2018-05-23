@@ -215,9 +215,6 @@ func getKey(c *gin.Context) (string, error) {
 	token := c.Request.Header.Get(AuthenticationHeader)
 	if token == "" {
 		token = c.Query(AuthenticationHeader)
-		if token == "" {
-			return "", errors.New("Token is invalid.")
-		}
 	}
 	key = key + "\t" + token
 
