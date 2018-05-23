@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"time"
 	"fmt"
-	"errors"
 	"io/ioutil"
 
 	"github.com/gin-contrib/cache/persistence"
