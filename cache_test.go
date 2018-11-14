@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-contrib/cache/persistence"
+	"github.com/0987363/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )

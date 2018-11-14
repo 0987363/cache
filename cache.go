@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/gin-contrib/cache/persistence"
+	"github.com/0987363/cache/persistence"
 	"github.com/gin-gonic/gin"
 )
 
