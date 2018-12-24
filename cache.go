@@ -202,32 +202,9 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 				store.Delete(key)
 			}
 		} else {
-/*
-			log.Println(cache.Status)
 			c.Writer.WriteHeader(cache.Status)
 			for k, vals := range cache.Header {
 				for _, v := range vals {
-					if (k == "Content-Encoding" && v == "gzip") {
-						continue
-					}
-					switch k {
-					case "Access-Control-Allow-Credentials", "Access-Control-Allow-Origin", "Access-Control-Expose-Headers", "Vary":
-						continue
-					}
-					c.Writer.Header().Add(k, v)
-				}
-			}
-			c.Writer.Write(cache.Data)
-			*/
-
-			c.Writer.WriteHeader(cache.Status)
-			for k, vals := range cache.Header {
-				for _, v := range vals {
-					switch k {
-					case "Access-Control-Allow-Credentials", "Access-Control-Allow-Origin", "Access-Control-Expose-Headers", "Vary":
-						continue
-					}
-
 					c.Writer.Header().Set(k, v)
 				}
 			}
