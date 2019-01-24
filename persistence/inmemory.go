@@ -12,6 +12,10 @@ type InMemoryStore struct {
 	cache.Cache
 }
 
+func init() {
+	NewInMemoryStore(time.Hour)
+}
+
 // NewInMemoryStore returns a InMemoryStore
 func NewInMemoryStore(defaultExpiration time.Duration) *InMemoryStore {
 	s := &InMemoryStore{*cache.New(defaultExpiration, time.Minute)}
