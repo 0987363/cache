@@ -47,7 +47,9 @@ func NewRedisCache(host string, password string, defaultExpiration time.Duration
 			return nil
 		},
 	}
-	return &RedisStore{pool, defaultExpiration}
+	s := &RedisStore{pool, defaultExpiration}
+	Store = s
+	return s
 }
 
 // NewRedisCacheWithPool returns a RedisStore using the provided pool

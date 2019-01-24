@@ -147,7 +147,10 @@ func (w *cachedWriter) WriteString(data string) (n int, err error) {
 }
 
 // Cache Middleware
-func Cache(store *persistence.CacheStore) gin.HandlerFunc {
+func Cache(store persistence.CacheStore) gin.HandlerFunc {
+	if store == nil {
+		store = persistence.Store
+	}
 	return func(c *gin.Context) {
 		c.Set(CACHE_MIDDLEWARE_KEY, store)
 		c.Next()
@@ -155,6 +158,9 @@ func Cache(store *persistence.CacheStore) gin.HandlerFunc {
 }
 
 func SiteCache(store persistence.CacheStore, expire time.Duration) gin.HandlerFunc {
+	if store == nil {
+		store = persistence.Store
+	}
 	return func(c *gin.Context) {
 		var cache responseCache
 		key, err := getKey(c)
@@ -179,6 +185,9 @@ func SiteCache(store persistence.CacheStore, expire time.Duration) gin.HandlerFu
 
 // CachePage Decorator
 func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.HandlerFunc) gin.HandlerFunc {
+	if store == nil {
+		store = persistence.Store
+	}
 	return func(c *gin.Context) {
 		var cache responseCache
 		key, err := getKey(c)
@@ -215,6 +224,9 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 
 // CachePageWithoutQuery add ability to ignore GET query parameters.
 func CachePageWithoutQuery(store persistence.CacheStore, expire time.Duration, handle gin.HandlerFunc) gin.HandlerFunc {
+	if store == nil {
+		store = persistence.Store
+	}
 	return func(c *gin.Context) {
 		var cache responseCache
 		key := CreateKey(c.Request.URL.Path)
@@ -240,6 +252,9 @@ func CachePageWithoutQuery(store persistence.CacheStore, expire time.Duration, h
 
 // CachePageAtomic Decorator
 func CachePageAtomic(store persistence.CacheStore, expire time.Duration, handle gin.HandlerFunc) gin.HandlerFunc {
+	if store == nil {
+		store = persistence.Store
+	}
 	var m sync.Mutex
 	p := CachePage(store, expire, handle)
 	return func(c *gin.Context) {
@@ -250,6 +265,9 @@ func CachePageAtomic(store persistence.CacheStore, expire time.Duration, handle 
 }
 
 func CachePageWithoutHeader(store persistence.CacheStore, expire time.Duration, handle gin.HandlerFunc) gin.HandlerFunc {
+	if store == nil {
+		store = persistence.Store
+	}
 	return func(c *gin.Context) {
 		var cache responseCache
 		url := c.Request.URL

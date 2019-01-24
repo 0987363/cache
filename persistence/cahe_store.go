@@ -46,3 +46,46 @@ type CacheStore interface {
 	// Flush seletes all items from the cache.
 	Flush() error
 }
+
+var Store CacheStore
+
+// Get (see CacheStore interface)
+func Get(key string, value interface{}) error {
+	return Store.Get(key, value)
+}
+
+// Set (see CacheStore interface)
+func Set(key string, value interface{}, expires time.Duration) error {
+	return Store.Set(key, value, expires)
+}
+
+// Add (see CacheStore interface)
+func Add(key string, value interface{}, expires time.Duration) error {
+	return Store.Add(key, value, expires)
+}
+
+// Replace (see CacheStore interface)
+func Replace(key string, value interface{}, expires time.Duration) error {
+	return Store.Replace(key, value, expires)
+}
+
+// Delete (see CacheStore interface)
+func Delete(key string) error {
+	return Store.Delete(key)
+}
+
+// Increment (see CacheStore interface)
+func Increment(key string, n uint64) (uint64, error) {
+	return Store.Increment(key, n)
+}
+
+// Decrement (see CacheStore interface)
+func Decrement(key string, n uint64) (uint64, error) {
+	return Store.Increment(key, n)
+}
+
+// Flush (see CacheStore interface)
+func Flush() error {
+	return Store.Flush()
+}
+

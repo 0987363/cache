@@ -15,7 +15,9 @@ type MemcachedStore struct {
 
 // NewMemcachedStore returns a MemcachedStore
 func NewMemcachedStore(hostList []string, defaultExpiration time.Duration) *MemcachedStore {
-	return &MemcachedStore{memcache.New(hostList...), defaultExpiration}
+	s := &MemcachedStore{memcache.New(hostList...), defaultExpiration}
+	Store = s
+	return s
 }
 
 // Set (see CacheStore interface)
