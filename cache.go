@@ -3,15 +3,15 @@ package cache
 import (
 	"bytes"
 	"crypto/sha1"
+	"encoding/gob"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
-	"fmt"
-	"io/ioutil"
-	"encoding/gob"
 
 	"github.com/0987363/cache/persistence"
 	"github.com/gin-gonic/gin"
@@ -26,22 +26,22 @@ var (
 )
 
 const (
-    // ResultLimitHeader is request limit
-    ResultLimitHeader = "X-Result-Limit"
+	// ResultLimitHeader is request limit
+	ResultLimitHeader = "X-Result-Limit"
 
-    // ResultOffsetHeader is request offset
-    ResultOffsetHeader = "X-Result-Offset"
+	// ResultOffsetHeader is request offset
+	ResultOffsetHeader = "X-Result-Offset"
 
-    // ResultSortHeader is request sort
-    ResultSortHeader = "X-Result-Sort"
+	// ResultSortHeader is request sort
+	ResultSortHeader = "X-Result-Sort"
 
-    // ResultCountHeader is request result count
-    ResultCountHeader = "X-Result-Count"
+	// ResultCountHeader is request result count
+	ResultCountHeader = "X-Result-Count"
 
 	AuthenticationHeader = "X-Druid-Authentication"
 
-    // ResultLastParam url last
-    ResultLastHeader = "X-Result-Last"
+	// ResultLastParam url last
+	ResultLastHeader = "X-Result-Last"
 )
 
 type responseCache struct {
@@ -49,6 +49,7 @@ type responseCache struct {
 	Header http.Header
 	Data   []byte
 }
+
 // RegisterResponseCacheGob registers the responseCache type with the encoding/gob package
 func RegisterResponseCacheGob() {
 	gob.Register(responseCache{})
@@ -66,7 +67,7 @@ type cachedWriter struct {
 var _ gin.ResponseWriter = &cachedWriter{}
 
 func SetPageKey(key string) {
-    PageCachePrefix = key
+	PageCachePrefix = key
 }
 
 // CreateKey creates a package specific key for a given string
@@ -163,11 +164,7 @@ func SiteCache(store persistence.CacheStore, expire time.Duration) gin.HandlerFu
 	}
 	return func(c *gin.Context) {
 		var cache responseCache
-		key, err := getKey(c)
-		if err != nil {
-			log.Println("Get key failed:", err)
-			return
-		}
+		key := getKey(c)
 
 		if err := store.Get(key, &cache); err != nil {
 			c.Next()
@@ -190,18 +187,25 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 	}
 	return func(c *gin.Context) {
 		var cache responseCache
-		key, err := getKey(c)
-		if err != nil {
-			log.Println("Get key failed:", err)
+		key := getKey(c)
+
+		err := store.Get(key, &cache)
+		if err == nil {
+			c.Writer.WriteHeader(cache.Status)
+			for k, vals := range cache.Header {
+				for _, v := range vals {
+					c.Writer.Header().Set(k, v)
+				}
+			}
+			c.Writer.Write(cache.Data)
 			return
 		}
 
-		if err := store.Get(key, &cache); err != nil {
-			if err != persistence.ErrCacheMiss {
-				log.Println("Get data failed:", err, key)
-				return
-			}
-			// replace writer
+		switch err {
+		case io.EOF:
+			handle(c)
+			return
+		case persistence.ErrCacheMiss:
 			writer := newCachedWriter(store, expire, c.Writer, key)
 			c.Writer = writer
 			handle(c)
@@ -210,14 +214,10 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 			if c.IsAborted() {
 				store.Delete(key)
 			}
-		} else {
-			c.Writer.WriteHeader(cache.Status)
-			for k, vals := range cache.Header {
-				for _, v := range vals {
-					c.Writer.Header().Set(k, v)
-				}
-			}
-			c.Writer.Write(cache.Data)
+			return
+		default:
+			log.Println("Get data failed:", err, key)
+			return
 		}
 	}
 }
@@ -229,7 +229,7 @@ func CachePageWithoutQuery(store persistence.CacheStore, expire time.Duration, h
 	}
 	return func(c *gin.Context) {
 		var cache responseCache
-		key := CreateKey(c.Request.URL.Path)
+		key := getKey(c)
 		if err := store.Get(key, &cache); err != nil {
 			if err != persistence.ErrCacheMiss {
 				log.Println(err.Error())
@@ -270,13 +270,20 @@ func CachePageWithoutHeader(store persistence.CacheStore, expire time.Duration, 
 	}
 	return func(c *gin.Context) {
 		var cache responseCache
-		url := c.Request.URL
-		key := CreateKey(url.RequestURI())
-		if err := store.Get(key, &cache); err != nil {
-			if err != persistence.ErrCacheMiss {
-				log.Println(err.Error())
-			}
-			// replace writer
+		key := getKey(c)
+
+		err := store.Get(key, &cache)
+		if err == nil {
+			c.Writer.WriteHeader(cache.Status)
+			c.Writer.Write(cache.Data)
+			return
+		}
+
+		switch err {
+		case io.EOF:
+			handle(c)
+			return
+		case persistence.ErrCacheMiss:
 			writer := newCachedWriter(store, expire, c.Writer, key)
 			c.Writer = writer
 			handle(c)
@@ -285,16 +292,16 @@ func CachePageWithoutHeader(store persistence.CacheStore, expire time.Duration, 
 			if c.IsAborted() {
 				store.Delete(key)
 			}
-		} else {
-			c.Writer.WriteHeader(cache.Status)
-			c.Writer.Write(cache.Data)
+			return
+		default:
+			log.Println("Get data failed:", err, key)
+			return
 		}
 	}
 }
 
-func getKey(c *gin.Context) (string, error) {
+func getKey(c *gin.Context) string {
 	key := c.Request.Method
-
 
 	token := c.Request.Header.Get(AuthenticationHeader)
 	if token == "" {
@@ -322,11 +329,10 @@ func getKey(c *gin.Context) (string, error) {
 
 	if c.Request.Method == http.MethodPost {
 		b, _ := ioutil.ReadAll(c.Request.Body)
-		c.Request.Body.Close()  //  must close
+		c.Request.Body.Close() //  must close
 		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(b))
 		key = key + "\t" + string(b)
 	}
 
-	return urlEscape(PageCachePrefix, c.Request.URL.RequestURI() + key), nil
+	return urlEscape(PageCachePrefix, c.Request.URL.RequestURI()+key)
 }
-
