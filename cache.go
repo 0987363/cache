@@ -303,6 +303,11 @@ func CachePageWithoutHeader(store persistence.CacheStore, expire time.Duration, 
 func getKey(c *gin.Context) string {
 	key := c.Request.Method
 
+	referer := c.Request.Header.Get("Referer")
+	if referer != "" {
+		key = key + "\t" + referer
+	}
+
 	token := c.Request.Header.Get(AuthenticationHeader)
 	if token == "" {
 		token = c.Query(AuthenticationHeader)
