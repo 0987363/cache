@@ -166,9 +166,8 @@ func SiteCache(store persistence.CacheStore, expire time.Duration) gin.HandlerFu
 		var cache responseCache
 		key := getKey(c)
 
-		if err := store.Get(key, &cache); err != nil {
-			c.Next()
-		} else {
+		err := store.Get(key, &cache)
+		if err == nil {
 			c.Writer.WriteHeader(cache.Status)
 			for k, vals := range cache.Header {
 				for _, v := range vals {
@@ -176,6 +175,26 @@ func SiteCache(store persistence.CacheStore, expire time.Duration) gin.HandlerFu
 				}
 			}
 			c.Writer.Write(cache.Data)
+			return
+		}
+
+		switch err {
+		case io.EOF:
+			c.Next()
+			return
+		case persistence.ErrCacheMiss:
+			writer := newCachedWriter(store, expire, c.Writer, key)
+			c.Writer = writer
+			c.Next()
+
+			// Drop caches of aborted contexts
+			if c.IsAborted() {
+				store.Delete(key)
+			}
+			return
+		default:
+			log.Println("Get data failed:", err, key)
+			return
 		}
 	}
 }
