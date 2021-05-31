@@ -236,6 +236,9 @@ func CachePage(store persistence.CacheStore, expire time.Duration, handle gin.Ha
 			return
 		default:
 			log.Println("Get data failed:", err, key)
+			writer := newCachedWriter(store, expire, c.Writer, key)
+			c.Writer = writer
+			handle(c)
 			return
 		}
 	}
